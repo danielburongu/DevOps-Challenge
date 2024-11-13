@@ -69,7 +69,7 @@ jobs:
         ports:
           - 5435:5432
         options: >-
-          --health-cmd pg_isready -U myuser
+          --health-cmd "pg_isready -h localhost -p 5432 -d mydatabase -U myuser"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -96,12 +96,8 @@ jobs:
 
       - name: Run Django tests
         env:
+          DATABASE_URL: postgres://myuser:mypassword@localhost:5435/mydatabase
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DB_NAME: mydatabase
-          DB_USER: myuser
-          DB_PASSWORD: mypassword
-          DB_HOST: localhost
-          DB_PORT: 5435
         run: |
           python todo_project/manage.py makemigrations --no-input
           python todo_project/manage.py migrate --no-input
