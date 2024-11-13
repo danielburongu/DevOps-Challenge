@@ -1,104 +1,104 @@
-- hosts: all
-  become: true
-  vars:
-    app_directory: /home/{{ ansible_user }}/app
-    compose_version: "v2.26.0"
+name: CI Pipeline
 
-  tasks:
-    # Task 1: Ensure Docker Python SDK is installed
-    - name: Ensure Docker Python SDK is installed
-      pip:
-        name: docker
-        state: present
-        executable: pip3
-      register: docker_sdk_result
-    - debug:
-        msg: "Docker SDK installation result: {{ docker_sdk_result }}"
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
-    # Task 2: Check if Docker is running
-    - name: Check Docker status
-      command: systemctl is-active docker
-      register: docker_status
-      failed_when: docker_status.stdout != "active"
-    - debug:
-        msg: "Docker status: {{ docker_status.stdout }}"
+jobs:
+  # Linting job
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # Task 3: Download and install Docker Compose if not already installed
-    - name: Check if Docker Compose is already installed
-      command: docker-compose --version
-      register: compose_check
-      ignore_errors: true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: Download Docker Compose binary if not present
-      when: compose_check.failed
-      get_url:
-        url: "https://github.com/docker/compose/releases/download/{{ compose_version }}/docker-compose-linux-x86_64"
-        dest: /usr/local/bin/docker-compose
-        mode: '0755'
-    
-    - name: Ensure Docker Compose binary is executable
-      file:
-        path: /usr/local/bin/docker-compose
-        mode: '0755'
-    
-    - name: Verify Docker Compose installation
-      command: docker-compose --version
-      register: compose_version_check
-    - debug:
-        msg: "Docker Compose version: {{ compose_version_check.stdout }}"
+      - name: Install flake8 for linting
+        run: pip install flake8
 
-    # Task 4: Pull the latest web image
-    - name: Pull latest web image
-      community.docker.docker_image:
-        name: burongu/devops-challenge-web
-        tag: latest
-        source: pull
-      register: web_image_result
-      failed_when: web_image_result.failed
-    - debug:
-        msg: "Web image pull result: {{ web_image_result }}"
+      - name: Run flake8 linter
+        run: flake8 . --exit-zero
 
-    # Task 5: Pull the latest nginx image
-    - name: Pull latest nginx image
-      community.docker.docker_image:
-        name: burongu/devops-challenge-nginx
-        tag: latest
-        source: pull
-      register: nginx_image_result
-      failed_when: nginx_image_result.failed
-    - debug:
-        msg: "Nginx image pull result: {{ nginx_image_result }}"
+  # Build Docker Image and push to Docker Hub
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # Task 6: Ensure the application directory exists
-    - name: Ensure app directory exists
-      file:
-        path: "{{ app_directory }}"
-        state: directory
-        owner: "{{ ansible_user }}"
-        mode: '0755'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    # Task 7: Copy docker-compose.yml to remote server
-    - name: Copy docker-compose.yml to remote server
-      copy:
-        src: ../docker-compose.yml
-        dest: "{{ app_directory }}/docker-compose.yml"
-        owner: "{{ ansible_user }}"
-        mode: '0644'
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # Task 8: Copy .env file to remote server
-    - name: Copy .env file to remote server
-      copy:
-        src: ../.env
-        dest: "{{ app_directory }}/.env"
-        owner: "{{ ansible_user }}"
-        mode: '0644'
+      - name: Build Docker Image
+        run: |
+          docker build \
+            --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
+            -f todo_project/Dockerfile \
+            -t ${{ secrets.DOCKER_USERNAME }}/todo_project:latest \
+            todo_project/
 
-    # Task 9: Run Docker Compose using the docker-compose binary
-    - name: Run Docker Compose using docker-compose
-      command: docker-compose up -d --build
-      args:
-        chdir: "{{ app_directory }}"
-      register: compose_run_result
-      failed_when: compose_run_result.rc != 0
-    - debug:
-        msg: "Docker Compose run result: {{ compose_run_result.stdout }}"
+      - name: Push Docker Image to Docker Hub
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/todo_project:latest
+
+  # Testing job with PostgreSQL service
+  test:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_DB: ${{ secrets.DB_NAME }}
+          POSTGRES_USER: ${{ secrets.DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r todo_project/requirements.txt
+
+      - name: Wait for Database to be Ready
+        run: |
+          for i in {1..10}; do
+            pg_isready -h localhost -p 5435 -U ${{ secrets.DB_USER }} && break || sleep 5;
+          done
+
+      - name: Run Django tests
+        env:
+          DATABASE_URL: postgres://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@localhost:5435/${{ secrets.DB_NAME }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DB_HOST: localhost
+          DB_PORT: 5435
+        run: |
+          python ./todo_project/manage.py makemigrations --no-input
+          python ./todo_project/manage.py migrate --no-input
+          python ./todo_project/manage.py test
