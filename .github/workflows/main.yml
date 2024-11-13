@@ -43,9 +43,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Debug Docker Build Context
-        run: ls -la
-
       - name: Build Docker Image
         run: |
           docker build \
@@ -97,6 +94,11 @@ jobs:
       - name: Run Django tests
         env:
           DATABASE_URL: postgres://myuser:mypassword@localhost:5435/mydatabase
+          DB_NAME: mydatabase
+          DB_USER: myuser
+          DB_PASSWORD: mypassword
+          DB_HOST: localhost
+          DB_PORT: 5435
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
           python todo_project/manage.py makemigrations --no-input
