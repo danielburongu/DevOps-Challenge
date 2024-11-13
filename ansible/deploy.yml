@@ -1,0 +1,104 @@
+- hosts: all
+  become: true
+  vars:
+    app_directory: /home/{{ ansible_user }}/app
+    compose_version: "v2.26.0"
+
+  tasks:
+    # Task 1: Ensure Docker Python SDK is installed
+    - name: Ensure Docker Python SDK is installed
+      pip:
+        name: docker
+        state: present
+        executable: pip3
+      register: docker_sdk_result
+    - debug:
+        msg: "Docker SDK installation result: {{ docker_sdk_result }}"
+
+    # Task 2: Check if Docker is running
+    - name: Check Docker status
+      command: systemctl is-active docker
+      register: docker_status
+      failed_when: docker_status.stdout != "active"
+    - debug:
+        msg: "Docker status: {{ docker_status.stdout }}"
+
+    # Task 3: Download and install Docker Compose if not already installed
+    - name: Check if Docker Compose is already installed
+      command: docker-compose --version
+      register: compose_check
+      ignore_errors: true
+
+    - name: Download Docker Compose binary if not present
+      when: compose_check.failed
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/{{ compose_version }}/docker-compose-linux-x86_64"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+    
+    - name: Ensure Docker Compose binary is executable
+      file:
+        path: /usr/local/bin/docker-compose
+        mode: '0755'
+    
+    - name: Verify Docker Compose installation
+      command: docker-compose --version
+      register: compose_version_check
+    - debug:
+        msg: "Docker Compose version: {{ compose_version_check.stdout }}"
+
+    # Task 4: Pull the latest web image
+    - name: Pull latest web image
+      community.docker.docker_image:
+        name: burongu/devops-challenge-web
+        tag: latest
+        source: pull
+      register: web_image_result
+      failed_when: web_image_result.failed
+    - debug:
+        msg: "Web image pull result: {{ web_image_result }}"
+
+    # Task 5: Pull the latest nginx image
+    - name: Pull latest nginx image
+      community.docker.docker_image:
+        name: burongu/devops-challenge-nginx
+        tag: latest
+        source: pull
+      register: nginx_image_result
+      failed_when: nginx_image_result.failed
+    - debug:
+        msg: "Nginx image pull result: {{ nginx_image_result }}"
+
+    # Task 6: Ensure the application directory exists
+    - name: Ensure app directory exists
+      file:
+        path: "{{ app_directory }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        mode: '0755'
+
+    # Task 7: Copy docker-compose.yml to remote server
+    - name: Copy docker-compose.yml to remote server
+      copy:
+        src: ../docker-compose.yml
+        dest: "{{ app_directory }}/docker-compose.yml"
+        owner: "{{ ansible_user }}"
+        mode: '0644'
+
+    # Task 8: Copy .env file to remote server
+    - name: Copy .env file to remote server
+      copy:
+        src: ../.env
+        dest: "{{ app_directory }}/.env"
+        owner: "{{ ansible_user }}"
+        mode: '0644'
+
+    # Task 9: Run Docker Compose using the docker-compose binary
+    - name: Run Docker Compose using docker-compose
+      command: docker-compose up -d --build
+      args:
+        chdir: "{{ app_directory }}"
+      register: compose_run_result
+      failed_when: compose_run_result.rc != 0
+    - debug:
+        msg: "Docker Compose run result: {{ compose_run_result.stdout }}"
