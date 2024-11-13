@@ -1,52 +1,44 @@
-# Django To-Do API with DevOps Practices
+# Django To-Do API i.e DevOps-Challenge 🚀
 
-## Project Overview
-This project demonstrates building a Django-based To-Do API with DevOps best practices, including containerization using Docker, continuous integration using GitHub Actions, and deployment automation with Ansible.
+This project is a Django-based web application integrated with PostgreSQL, Nginx, and Docker. It includes a REST API built with Django Rest Framework and uses Gunicorn as the WSGI server. The application is containerized using Docker and managed using Docker Compose. This guide provides step-by-step instructions on setting up and deploying the application.
 
-### Features
-- User authentication (registration, login, and logout)
-- To-Do task management (CRUD operations)
-- PostgreSQL database for data persistence
-- Email notifications using MailHog
-- Deployed using Docker and Ansible
+---
 
-## Technologies Used
-- Django & Django REST Framework
-- PostgreSQL
-- Docker & Docker Compose
-- Nginx
-- GitHub Actions for CI/CD
-- Ansible for deployment automation
-- MailHog for email testing
+## 🗂️ Table of Contents
+- [Prerequisites](#prerequisites)
+- [Environment Variables](#environment-variables)
+- [Setting Up and Running the Project](#setting-up-and-running-the-project)
+- [Accessing the Application](#accessing-the-application)
 
-## Getting Started
+---
 
-### Prerequisites
-- Python 3.10
-- Docker & Docker Compose
+## 🛠️ Prerequisites
+Make sure you have the following installed on your system:
+- Docker
+- Docker Compose
+- Python 3.12+
 - Git
-- Ansible (for deployment)
 
-### Installation
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/yourusername/todo-api-devops.git
-    cd todo-api-devops
-    ```
-2. Set up a virtual environment and install dependencies:
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    ```
+---
 
-### Running the Application
-1. Build and run Docker containers:
-    ```bash
-    docker-compose up --build
-    ```
-2. Access the application at: [http://localhost](http://localhost).
+## 🔑 Environment Variables
+Before running the project, create a `.env` file in the root directory.
 
-### Running Tests
-```bash
-python manage.py test
+## 🏃 Setting Up and Running the Project
+- Step 1: Clone the Repository
+  - git clone https:
+  - cd DevOps-Challenge
+
+- Step 2: Build and Run the Docker Containers
+ - docker-compose up --build
+
+  ## This command will:
+
+1. Set up a PostgreSQL database container.
+2. Run migrations and create a superuser in the Django application.
+3. Set up an Nginx container to act as a reverse proxy.
+
+- Step 3: Access the Application
+ - Django App: http://localhost:8400
+ - Nginx: http://localhost:8500
+ - Mailhog: http://localhost:9325
