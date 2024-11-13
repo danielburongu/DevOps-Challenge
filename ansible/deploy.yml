@@ -45,16 +45,16 @@ jobs:
 
       - name: Debug Docker Build Context
         run: |
-          echo "Listing files in the root directory"
+          echo "Listing files in root directory"
           ls -la
           echo "Listing contents of todo_project directory"
           ls -la todo_project/
-
+      
       - name: Build Docker Image
         run: |
           docker build \
             --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
-            -f ./Dockerfile \
+            -f Dockerfile \
             -t ${{ secrets.DOCKER_USERNAME }}/todo_project:latest .
 
       - name: Push Docker Image to Docker Hub
@@ -103,6 +103,6 @@ jobs:
           DATABASE_URL: postgres://test_user:test_password@localhost:5435/test_db
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
-          python ./todo_project/manage.py makemigrations --no-input
-          python ./todo_project/manage.py migrate --no-input
-          python ./todo_project/manage.py test
+          python todo_project/manage.py makemigrations --no-input
+          python todo_project/manage.py migrate --no-input
+          python todo_project/manage.py test
