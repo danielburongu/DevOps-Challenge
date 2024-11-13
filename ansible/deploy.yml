@@ -43,13 +43,19 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Debug Docker Build Context
+        run: |
+          echo "Listing files in current directory"
+          ls -la
+          echo "Listing contents of todo_project directory"
+          ls -la todo_project/
+
       - name: Build Docker Image
         run: |
           docker build \
             --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
-            -f todo_project/Dockerfile \
-            -t ${{ secrets.DOCKER_USERNAME }}/todo_project:latest \
-            todo_project/
+            -f Dockerfile \
+            -t ${{ secrets.DOCKER_USERNAME }}/todo_project:latest .
 
       - name: Push Docker Image to Docker Hub
         run: docker push ${{ secrets.DOCKER_USERNAME }}/todo_project:latest
@@ -61,9 +67,9 @@ jobs:
       db:
         image: postgres:17
         env:
-          POSTGRES_DB: ${{ secrets.DB_NAME }}
-          POSTGRES_USER: ${{ secrets.DB_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
         ports:
           - 5435:5432
         options: >-
@@ -84,20 +90,25 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r todo_project/requirements.txt
+          pip install -r requirements.txt
 
       - name: Wait for Database to be Ready
         run: |
           for i in {1..10}; do
-            pg_isready -h localhost -p 5435 -U ${{ secrets.DB_USER }} && break || sleep 5;
+            pg_isready -h localhost -p 5435 -U test_user && break || sleep 5;
           done
 
       - name: Run Django tests
         env:
-          DATABASE_URL: postgres://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@localhost:5435/${{ secrets.DB_NAME }}
+          DATABASE_URL: postgres://test_user:test_password@localhost:5435/test_db
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
           DB_HOST: localhost
           DB_PORT: 5435
+          EMAIL_HOST: localhost
+          EMAIL_PORT: 1025
         run: |
           python ./todo_project/manage.py makemigrations --no-input
           python ./todo_project/manage.py migrate --no-input
