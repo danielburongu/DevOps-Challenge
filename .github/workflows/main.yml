@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Flake8 for Linting
+      - name: Install flake8
         run: pip install flake8
 
       - name: Run Linting
@@ -66,7 +66,7 @@ jobs:
         ports:
           - 5435:5432
         options: >-
-          --health-cmd pg_isready -U test_user -d test_db
+          --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -84,22 +84,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r todo_project/requirements.txt
 
-      - name: Debug Postgres Connection
-        run: pg_isready -h localhost -p 5435 -U test_user
-
       - name: Wait for Database to be Ready
         run: |
           for i in {1..10}; do
             pg_isready -h localhost -p 5435 -U test_user && break || sleep 5;
           done
-
-      - name: Run Migrations
-        env:
-          DATABASE_URL: postgres://test_user:test_password@localhost:5435/test_db
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        run: |
-          python ./todo_project/manage.py makemigrations --no-input
-          python ./todo_project/manage.py migrate --no-input
 
       - name: Run Tests
         env:
@@ -112,4 +101,7 @@ jobs:
           DB_PORT: 5435
           EMAIL_HOST: localhost
           EMAIL_PORT: 1025
-        run: python ./todo_project/manage.py test
+        run: |
+          python ./todo_project/manage.py makemigrations --no-input
+          python ./todo_project/manage.py migrate --no-input
+          python ./todo_project/manage.py test
