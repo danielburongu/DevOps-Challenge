@@ -1,0 +1,9 @@
+# Ignore environment variable files
+.env
+.env.local
+.env.*.local
+hosts.ini
+# Ignore IDE specific files
+.vscode/
+../myenv
+/env

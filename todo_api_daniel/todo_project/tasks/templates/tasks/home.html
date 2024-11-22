@@ -1,0 +1,18 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+  <h1>Task List</h1>
+  <a href="{% url 'task_create' %}">Create New Task</a>
+  <ul>
+    {% for task in tasks %}
+      <li>
+        <a href="{% url 'task_detail' task.pk %}">{{ task.title }}</a> - 
+        {% if task.completed %}
+          Completed
+        {% else %}
+          In Progress
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}
