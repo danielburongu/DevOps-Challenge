@@ -6,4 +6,18 @@ hosts.ini
 # Ignore IDE specific files
 .vscode/
 ../myenv
-/env
+./env
+../venv
+# Ignore Python bytecode files
+*.pyc
+__pycache__/
+
+# Ignore virtual environment directories
+env/
+venv/
+
+# Ignore common environment files
+*.env
+.env.*
+
+# Add other ignore patterns as needed

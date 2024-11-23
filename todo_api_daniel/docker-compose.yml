@@ -1,58 +1,55 @@
 version: '3.8'
 
 services:
+  web:
+    build: .
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    ports:
+      - "8000:8000"  # Expose port 8000 for the Django app
+    volumes:
+      - .:/app
+      - static_volume:/app/static  # Volume for static files
+    depends_on:
+      - db
+      - mailhog
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - MAILHOG_SMTP_HOST=${MAILHOG_SMTP_HOST}
+      - MAILHOG_SMTP_PORT=${MAILHOG_SMTP_PORT}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+
   db:
     image: postgres:13
-    container_name: todo_postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5440:5432" 
+      - "5432:5432"  # Expose PostgreSQL port for host access (if needed)
 
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile.web
-    container_name: todo_django
-    command: >
-      sh -c "
-      while ! pg_isready -h db -p 5432 -U ${DB_USER}; do sleep 1; done;
-      python manage.py migrate &&
-      python manage.py collectstatic --noinput &&
-      gunicorn todo_project.wsgi:application --bind 0.0.0.0:8000
-      "
-    volumes:
-      - .:/app
-    env_file:
-      - .env
-    depends_on:
-      - db
+  mailhog:
+    image: mailhog/mailhog
     ports:
-      - "8410:8000"
+      - "8025:8025"  # Mailhog web UI for inspecting emails
+      - "1025:1025"  # Mailhog SMTP server
 
   nginx:
     build:
       context: .
       dockerfile: Dockerfile.nginx
-    container_name: todo_nginx
+    ports:
+      - "8600:80"  # Expose nginx port for reverse proxy
     depends_on:
       - web
-    volumes:
-      - static:/app/staticfiles
-    ports:
-      - "8600:80" 
-
-  mailhog:
-    image: mailhog/mailhog
-    container_name: todo_mailhog
-    ports:
-      - "9330:1125"
-      - "8030:8025"
 
 volumes:
-  postgres_data:
-  static:
+  db_data:
+  static_volume:
