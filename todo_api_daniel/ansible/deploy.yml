@@ -1,105 +1,97 @@
-name: CI Pipeline
+---
+- name: CI Pipeline
+  hosts: all
+  become: true
+  vars:
+    app_directory: /home/{{ ansible_user }}/daniel-todo-project
+    compose_version: "v2.26.0"
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  tasks:
+    - name: Ensure Docker Python SDK is installed
+      pip:
+        name: docker
+        state: present
+        executable: pip3
 
-jobs:
-  # Linting job
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Check Docker status
+      command: systemctl is-active docker
+      register: docker_status
+      failed_when: docker_status.stdout != "active"
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+    - name: Check if Docker Compose is already installed
+      command: docker-compose --version
+      register: compose_check
+      ignore_errors: true
 
-      - name: Install flake8 for linting
-        run: pip install flake8
+    - name: Download Docker Compose binary if not present
+      when: compose_check.failed
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/{{ compose_version }}/docker-compose-linux-x86_64"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
 
-      - name: Run flake8 linter
-        run: flake8 . --exit-zero
+    - name: Ensure Docker Compose binary is executable
+      file:
+        path: /usr/local/bin/docker-compose
+        mode: '0755'
 
-  # Build Docker Image and push to Docker Hub
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Verify Docker Compose installation
+      command: docker-compose --version
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Ensure app directory exists
+      file:
+        path: "{{ app_directory }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        mode: '0755'
 
-      - name: Build Docker Image
-        run: |
-          docker build \
-            --build-arg SECRET_KEY=${{ secrets.MY_SECRET_KEY }} \
-            -f Dockerfile \
-            -t ${{ secrets.DOCKER_USERNAME }}/my_project:latest .
+    - name: Copy all project files to the target directory
+      copy:
+        src: .
+        dest: "{{ app_directory }}/"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Check if Dockerfile.web exists
+      stat:
+        path: "{{ app_directory }}/Dockerfile.web"
+      register: dockerfile_web_stat
 
-      - name: Push Docker Image to Docker Hub
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/my_project:latest
+    - name: Check if Dockerfile.nginx exists
+      stat:
+        path: "{{ app_directory }}/Dockerfile.nginx"
+      register: dockerfile_nginx_stat
 
-  # Testing job with PostgreSQL service
-  test:
-    runs-on: ubuntu-latest
-    services:
-      db:
-        image: postgres:17
-        env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-        ports:
-          - 5435:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Check if requirements.txt exists
+      stat:
+        path: "{{ app_directory }}/requirements.txt"
+      register: requirements_stat
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
+    - name: Check if nginx.conf exists
+      stat:
+        path: "{{ app_directory }}/nginx/nginx.conf"
+      register: nginx_conf_stat
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: Check if manage.py exists
+      stat:
+        path: "{{ app_directory }}/todo_project/todo_project/manage.py"
+      register: managepy_stat
 
-      - name: Wait for Database to be Ready
-        run: |
-          for i in {1..10}; do
-            pg_isready -h localhost -p 5435 -U test_user && break || sleep 5;
-          done
+    - debug:
+        msg: "Dockerfile.web exists: {{ dockerfile_web_stat.stat.exists }} | Dockerfile.nginx exists: {{ dockerfile_nginx_stat.stat.exists }} | requirements.txt exists: {{ requirements_stat.stat.exists }} | nginx.conf exists: {{ nginx_conf_stat.stat.exists }} | manage.py exists: {{ managepy_stat.stat.exists }}"
 
-      - name: Run Django Tests
-        env:
-          DATABASE_URL: postgres://test_user:test_password@localhost:5435/test_db
-          SECRET_KEY: ${{ secrets.MY_SECRET_KEY }}
-          POSTGRES_DB: test_db
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-          DB_HOST: localhost
-          DB_PORT: 5435
-        run: |
-          python ./todo_project/manage.py makemigrations --no-input
-          python ./todo_project/manage.py migrate --no-input
-          python ./todo_project/manage.py test
+    - name: Reconnect to remote server if connection is lost
+      shell: ssh -q -o "BatchMode=yes" "{{ ansible_user }}@{{ inventory_hostname }}" exit || echo "Reconnecting"
+      ignore_errors: true
+      register: ssh_reconnect
+
+    - debug:
+        msg: "SSH reconnect attempt result: {{ ssh_reconnect }}"
+
+    - name: Pull the latest Docker images
+      shell: docker-compose pull
+      args:
+        chdir: "{{ app_directory }}"
+      retries: 3
+      delay: 10
