@@ -9,7 +9,6 @@ on:
       - main
 
 jobs:
-  # Linting job
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -27,7 +26,6 @@ jobs:
       - name: Run flake8 linter
         run: flake8 . --exit-zero
 
-  # Build Docker Image and push to Docker Hub
   build:
     runs-on: ubuntu-latest
     steps:
@@ -44,7 +42,6 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker Image
-        shell: bash
         run: |
           docker build --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
             -f Dockerfile \
@@ -53,7 +50,6 @@ jobs:
       - name: Push Docker Image to Docker Hub
         run: docker push ${{ secrets.DOCKER_USERNAME }}/todo_project:latest
 
-  # Testing job with PostgreSQL service
   test:
     runs-on: ubuntu-latest
     services:
