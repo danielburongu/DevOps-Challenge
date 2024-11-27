@@ -1,14 +1,14 @@
-version: '3.8'
-
 services:
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.web
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
     ports:
-      - "8000:8000"  # Expose port 8000 for the Django app
+      - "8410:8000"
     volumes:
-      - .:/app
-      - static_volume:/app/static  # Volume for static files
+      - .:/daniel-todo-project
+      - static_volume:/daniel-todo-project/staticfiles
     depends_on:
       - db
       - mailhog
@@ -23,6 +23,8 @@ services:
       - MAILHOG_SMTP_HOST=${MAILHOG_SMTP_HOST}
       - MAILHOG_SMTP_PORT=${MAILHOG_SMTP_PORT}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+    networks:
+      - my_custom_network
 
   db:
     image: postgres:13
@@ -33,22 +35,35 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"  # Expose PostgreSQL port for host access (if needed)
+      - "5500:5432"
+    networks:
+      - my_custom_network
 
   mailhog:
     image: mailhog/mailhog
     ports:
-      - "8025:8025"  # Mailhog web UI for inspecting emails
-      - "1025:1025"  # Mailhog SMTP server
+      - "8125:8025"  # Changed to avoid conflict
+      - "1026:1025"  # Changed to avoid conflict
+    networks:
+      - my_custom_network
 
   nginx:
     build:
       context: .
       dockerfile: Dockerfile.nginx
     ports:
-      - "8600:80"  # Expose nginx port for reverse proxy
+      - "8600:80"
     depends_on:
       - web
+    networks:
+      - my_custom_network
+
+networks:
+  my_custom_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24
 
 volumes:
   db_data:

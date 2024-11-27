@@ -1,27 +1,25 @@
 FROM python:3.10-slim
 
-WORKDIR /app
+WORKDIR /daniel-todo-project
 
 # Install dependencies
 RUN apt-get update && \
     apt-get install -y netcat-openbsd postgresql-client && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
 COPY . .
 
-# Set working directory for Django project
-WORKDIR /app/todo_project
+# Ensure staticfiles directory exists
+RUN mkdir -p /daniel-todo-project/staticfiles
+
+# Change to the correct working directory
+WORKDIR /daniel-todo-project/todo_project
 
 # Collect static files
-RUN python manage.py collectstatic --noinput
+RUN if [ -f manage.py ]; then python manage.py collectstatic --noinput; else echo "manage.py not found"; fi
 
-# Expose Django's default port
-EXPOSE 8000
-
-# Command to run the Django app
+# Command to run the application
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
