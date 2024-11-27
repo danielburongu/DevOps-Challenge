@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  # Linting job
+  # Linting job starts
   lint:
     runs-on: ubuntu-latest
     steps:
