@@ -53,7 +53,7 @@ jobs:
       - name: Push Docker Image to Docker Hub
         run: docker push ${{ secrets.DOCKER_USERNAME }}/todo_project:latest
 
-  # Testing job with PostgreSQL service
+  # Testing job with PostgreSQL services
   test:
     runs-on: ubuntu-latest
     services:
