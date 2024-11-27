@@ -52,7 +52,7 @@ jobs:
       - name: Push Docker Image to Docker Hub
         run: docker push ${{ secrets.DOCKER_USERNAME }}/todo_project:latest
 
-  # Testing job with PostgreSQL service
+  # Testing job with PostgreSQL services
   test:
     runs-on: ubuntu-latest
     services:
@@ -73,6 +73,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check working directory
+        run: pwd  # Print the current working directory to verify it
 
       - name: Set up Python
         uses: actions/setup-python@v5
