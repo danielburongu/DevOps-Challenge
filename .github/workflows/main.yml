@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
   workflow_dispatch:
 
 jobs:
@@ -25,8 +26,8 @@ jobs:
           pip install pre-commit black
           pre-commit install
 
-      - name: Run black (auto-fix)
-        run: black .
+      - name: Run black
+        run: black --check .
 
       - name: Run pre-commit
         run: pre-commit run --all-files
@@ -48,10 +49,8 @@ jobs:
 
       - name: Build Docker Image
         shell: bash
-        env:
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
-          docker build --build-arg SECRET_KEY="$SECRET_KEY" \
+          docker build --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
             -f Dockerfile \
             -t ${{ secrets.DOCKER_USERNAME }}/todo_project:latest .
 
