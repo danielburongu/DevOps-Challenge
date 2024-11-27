@@ -97,10 +97,7 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build \
-            --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
-            -f Dockerfile.web \
-            -t ${{ secrets.DOCKER_USERNAME }}/daniel-todo-project:latest .
+          docker build --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} -f Dockerfile.web -t ${{ secrets.DOCKER_USERNAME }}/daniel-todo-project:latest .
 
       - name: Push Docker Image to Docker Hub
         run: docker push ${{ secrets.DOCKER_USERNAME }}/daniel-todo-project:latest
