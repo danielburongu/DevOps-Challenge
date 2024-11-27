@@ -48,6 +48,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker Image
+        shell: bash
         run: |
           docker build --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
             -f Dockerfile \
