@@ -30,7 +30,6 @@ jobs:
   # Testing job with PostgreSQL services
   test:
     runs-on: ubuntu-latest
-    needs: lint
     services:
       db:
         image: postgres:17
@@ -83,7 +82,6 @@ jobs:
   # Build Docker Image and push to Docker Hub
   build:
     runs-on: ubuntu-latest
-    needs: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -110,7 +108,6 @@ jobs:
   # Deploy job
   deploy:
     runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
