@@ -20,8 +20,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install flake8 for linting
-        run: pip install flake8
+      - name: Install flake8 and plugins
+        run: pip install flake8 flake8-bugbear flake8-import-order
 
       - name: Run flake8 linter
         run: flake8 .
@@ -45,7 +45,8 @@ jobs:
         run: |
           docker build --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
             -f Dockerfile \
-            -t ${{ secrets.DOCKER_USERNAME }}/todo_project:latest .
+            -t ${{ secrets.DOCKER_USERNAME }}/todo_project:latest . \
+            --progress=plain
 
       - name: Push Docker Image to Docker Hub
         run: docker push ${{ secrets.DOCKER_USERNAME }}/todo_project:latest
@@ -83,7 +84,7 @@ jobs:
 
       - name: Wait for Database to be Ready
         run: |
-          for i in {1..10}; do
+          for i in {1..20}; do
             pg_isready -h localhost -p 5435 -U myuser -d mydatabase && break || sleep 5;
           done
 
