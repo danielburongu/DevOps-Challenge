@@ -11,7 +11,7 @@ on:
 jobs:
   # Linting job start
   lint:
-    runs-on: ubuntu-latest
+    runs-on: Windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
