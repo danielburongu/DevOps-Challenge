@@ -47,10 +47,10 @@ jobs:
         run: |
           docker build --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} \
             -f Dockerfile \
-            -t ${{ secrets.DOCKER_USERNAME }}/todo_project:latest .
+            -t ${{ secrets.DOCKER_USERNAME }}/daniel-todo-project:latest .
 
       - name: Push Docker Image to Docker Hub
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/todo_project:latest
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/daniel-todo-project:latest
 
   # Testing job with PostgreSQL service
   test:
@@ -82,7 +82,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          cd todo_project  # Navigate to the todo_project directory
+          cd todo_project  # Navigate to the todo_api_daniel directory
           pip install -r requirements.txt  # Now the path will be correct
 
       - name: Wait for Database to be Ready
