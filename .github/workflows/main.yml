@@ -121,11 +121,12 @@ jobs:
           sudo apt install -y ansible
 
       - name: Create Inventory File
-        run: echo "${{ secrets.INVENTORY_CONTENT }}" > inventory.ini
+        run: |
+          echo "[all]\ntodo_server ansible_host=${{ secrets.ANSIBLE_HOST }} ansible_user=${{ secrets.ANSIBLE_USER }} ansible_password=${{ secrets.ANSIBLE_PASSWORD }} ansible_become_password=${{ secrets.ANSIBLE_BECOME_PASSWORD }}" > hosts.ini
 
       - name: Run Ansible Playbook
         env:
           ANSIBLE_HOST_KEY_CHECKING: "false"
         run: |
-          ansible-playbook -i inventory.ini deploy.yml \
+          ansible-playbook -i hosts.ini ansible/deploy.yml \
             --extra-vars "docker_username=${{ secrets.DOCKER_USERNAME }} docker_password=${{ secrets.DOCKER_PASSWORD }}"
