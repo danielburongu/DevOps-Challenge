@@ -37,7 +37,7 @@ jobs:
 
   # Build Docker Image and push to Docker Hub
   build:
-    runs-on: ubuntu-latest
+    runs-on: Windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -63,7 +63,7 @@ jobs:
 
   # Testing job with PostgreSQL service
   test:
-    runs-on: ubuntu-latest
+    runs-on: Windows-latest
     services:
       db:
         image: postgres:15.3
