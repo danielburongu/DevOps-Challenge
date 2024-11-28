@@ -120,3 +120,25 @@ jobs:
         run: |
           docker-compose -f todo_api_daniel/docker-compose.yml build
           docker-compose -f todo_api_daniel/docker-compose.yml push
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
+
+      - name: Deploy app with Ansible
+        run: |
+          ansible-playbook -i hosts.ini deploy.yml --extra-vars "ansible_password=${{ secrets.ANSIBLE_PASSWORD }} ansible_become_password=${{ secrets.ANSIBLE_BECOME_PASSWORD }}"
+
+      - name: Verify deployment
+        run: |
+          ssh -i ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY_FILE }} ${{ secrets.ANSIBLE_USER }}@${{ secrets.REMOTE_SERVER }} "docker-compose -f /home/${{ secrets.ANSIBLE_USER }}/daniel-todo-project/docker-compose.yml ps"
