@@ -1,20 +1,17 @@
-version: '3.8'
-
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile.web
-    command: ["/wait-for-it.sh", "db:5432", "--", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
     ports:
       - "8410:8000"
     volumes:
       - .:/daniel-todo-project
       - static_volume:/daniel-todo-project/staticfiles
     depends_on:
-      db:
-        condition: service_healthy
-      mailhog:
+      - db
+      - mailhog
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG}
@@ -39,19 +36,14 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5500:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
     networks:
       - my_custom_network
 
   mailhog:
     image: mailhog/mailhog
     ports:
-      - "8125:8025"
-      - "9075:1025"
+      - "8126:8025"  # Changed to avoid conflict
+      - "1028:1025"  # Changed to avoid conflict
     networks:
       - my_custom_network
 
