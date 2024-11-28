@@ -32,46 +32,9 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-  build:
-    runs-on: ubuntu-latest
-    needs: lint
-
-    services:
-      docker:
-        image: docker:19.03.12
-        options: --privileged
-        ports:
-          - 2375:2375
-        env:
-          DOCKER_TLS_CERTDIR: ""
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Install Docker Compose
-        run: |
-          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-          docker-compose --version
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Docker images
-        run: |
-          docker-compose -f todo_api_daniel/docker-compose.yml build
-          docker-compose -f todo_api_daniel/docker-compose.yml push
-
   test:
     runs-on: ubuntu-latest
-    needs: [lint, build]
+    needs: lint
 
     services:
       docker:
@@ -120,3 +83,40 @@ jobs:
           docker-compose -f todo_api_daniel/docker-compose.yml logs
           docker-compose -f todo_api_daniel/docker-compose.yml run --no-TTY web python manage.py test
           docker-compose -f todo_api_daniel/docker-compose.yml down
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    services:
+      docker:
+        image: docker:19.03.12
+        options: --privileged
+        ports:
+          - 2375:2375
+        env:
+          DOCKER_TLS_CERTDIR: ""
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker images
+        run: |
+          docker-compose -f todo_api_daniel/docker-compose.yml build
+          docker-compose -f todo_api_daniel/docker-compose.yml push
