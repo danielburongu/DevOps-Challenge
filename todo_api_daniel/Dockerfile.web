@@ -10,6 +10,10 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy wait-for-it script
+COPY wait-for-it.sh /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh
+
 COPY . .
 
 # Ensure staticfiles directory exists
@@ -21,5 +25,5 @@ WORKDIR /daniel-todo-project/todo_project
 # Collect static files
 RUN if [ -f manage.py ]; then python manage.py collectstatic --noinput; else echo "manage.py not found"; fi
 
-# Command to run the application
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Command to run the application with wait-for-it script
+CMD ["/wait-for-it.sh", "db:5432", "--", "python", "manage.py", "runserver", "0.0.0.0:8000"]

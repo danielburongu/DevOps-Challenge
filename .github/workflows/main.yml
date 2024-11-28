@@ -61,7 +61,7 @@ jobs:
           docker-compose -f todo_api_daniel/docker-compose.yml build
           docker-compose -f todo_api_daniel/docker-compose.yml push
 
-      - name: Run test
+      - name: Run tests
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           DEBUG: ${{ secrets.DEBUG }}
