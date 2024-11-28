@@ -76,5 +76,5 @@ jobs:
         run: |
           docker-compose -f todo_api_daniel/docker-compose.yml up -d
           docker-compose -f todo_api_daniel/docker-compose.yml logs
-          docker-compose -f todo_api_daniel/docker-compose.yml exec web python manage.py test
+          docker-compose -f todo_api_daniel/docker-compose.yml run web python manage.py test
           docker-compose -f todo_api_daniel/docker-compose.yml down
