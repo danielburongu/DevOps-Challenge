@@ -42,8 +42,8 @@ services:
   mailhog:
     image: mailhog/mailhog
     ports:
-      - "8125:8025"  # Changed to avoid conflict
-      - "1026:1025"  # Changed to avoid conflict
+      - "8126:8025"  # Changed to avoid conflict
+      - "1028:1025"  # Changed to avoid conflict
     networks:
       - my_custom_network
 
