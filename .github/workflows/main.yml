@@ -62,6 +62,17 @@ jobs:
           docker-compose -f todo_api_daniel/docker-compose.yml push
 
       - name: Run tests
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DEBUG: ${{ secrets.DEBUG }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          MAILHOG_SMTP_HOST: ${{ secrets.MAILHOG_SMTP_HOST }}
+          MAILHOG_SMTP_PORT: ${{ secrets.MAILHOG_SMTP_PORT }}
+          ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
         run: |
           docker-compose -f todo_api_daniel/docker-compose.yml up -d
           docker-compose -f todo_api_daniel/docker-compose.yml exec web python manage.py test
