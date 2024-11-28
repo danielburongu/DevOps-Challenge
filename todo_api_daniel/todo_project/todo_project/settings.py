@@ -8,9 +8,10 @@ environ.Env.read_env()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = env('SECRET_KEY', default='fallback-secret-key')
-DEBUG = env('DEBUG', default='True') == 'True'
-ALLOWED_HOSTS = env('ALLOWED_HOSTS', default='localhost').split(',')
+# Ensure all necessary environment variables are present
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env.bool('DEBUG', default=False)
+ALLOWED_HOSTS = env('ALLOWED_HOSTS').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -56,17 +57,17 @@ WSGI_APPLICATION = 'todo_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DB_NAME', default='todo_db'),
-        'USER': env('DB_USER', default='user'),
-        'PASSWORD': env('DB_PASSWORD', default='password'),
-        'HOST': env('DB_HOST', default='db'),
-        'PORT': env('DB_PORT', default='5432'),
+        'NAME': env('DB_NAME'),
+        'USER': env('DB_USER'),
+        'PASSWORD': env('DB_PASSWORD'),
+        'HOST': env('DB_HOST'),
+        'PORT': env('DB_PORT'),
     }
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = env('MAILHOG_SMTP_HOST', default='mailhog')
-EMAIL_PORT = int(env('MAILHOG_SMTP_PORT', default=1025))
+EMAIL_HOST = env('MAILHOG_SMTP_HOST')
+EMAIL_PORT = int(env('MAILHOG_SMTP_PORT'))
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -78,3 +79,8 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
     X_FRAME_OPTIONS = 'DENY'
+
+# Security settings when not in DEBUG mode
+SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=True)
+CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=True)
+SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
