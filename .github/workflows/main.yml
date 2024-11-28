@@ -34,7 +34,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install flake8
-          pip install -r requirements.txt
+          pip install -r todo_api_daniel/requirements.txt  # Adjusted paths
 
       - name: Lint code
         run: |
@@ -52,11 +52,11 @@ jobs:
 
       - name: Build and push Docker images
         run: |
-          docker-compose -f docker-compose.yml build
-          docker-compose -f docker-compose.yml push
+          docker-compose -f todo_api_daniel/docker-compose.yml build
+          docker-compose -f todo_api_daniel/docker-compose.yml push
 
       - name: Run tests
         run: |
-          docker-compose -f docker-compose.yml up -d
-          docker-compose -f docker-compose.yml exec web python manage.py test
-          docker-compose -f docker-compose.yml down
+          docker-compose -f todo_api_daniel/docker-compose.yml up -d
+          docker-compose -f todo_api_daniel/docker-compose.yml exec web python manage.py test
+          docker-compose -f todo_api_daniel/docker-compose.yml down
