@@ -1,4 +1,4 @@
-name: daniel-todo-project Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
@@ -9,118 +9,38 @@ on:
       - main
 
 jobs:
-  # Linting job
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install flake8 for linting
-        run: pip install flake8
-
-      - name: Run flake8 linter
-        run: flake8 . --exit-zero
-
-  # Testing job with PostgreSQL services
-  test:
-    runs-on: ubuntu-latest
-    services:
-      db:
-        image: postgres:17
-        env:
-          POSTGRES_DB: ${DB_NAME}
-          POSTGRES_USER: ${DB_USER}
-          POSTGRES_PASSWORD: ${DB_PASSWORD}
-        ports:
-          - 5435:5432
-        options: >-
-          --health-cmd "pg_isready -h localhost -p 5432 -d ${DB_NAME} -U ${DB_USER}"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Wait for Database to be Ready
-        run: |
-          for i in {1..10}; do
-            pg_isready -h localhost -p 5435 -U ${DB_USER} && break || sleep 5;
-          done
-
-      - name: Run Django tests
-        env:
-          DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@localhost:5435/${DB_NAME}
-          DB_NAME: ${DB_NAME}
-          DB_USER: ${DB_USER}
-          DB_PASSWORD: ${DB_PASSWORD}
-          DB_HOST: localhost
-          DB_PORT: 5435
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        run: |
-          python manage.py makemigrations --no-input
-          python manage.py migrate --no-input
-          python manage.py test
-
-  # Build Docker Image and push to Docker Hub
   build:
     runs-on: ubuntu-latest
+
+    services:
+      docker:
+        image: docker:19.03.12
+        options: --privileged
+        ports:
+          - 2375:2375
+        env:
+          DOCKER_TLS_CERTDIR: ""
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v1
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker Image
+      - name: Build and push Docker images
         run: |
-          docker build --build-arg SECRET_KEY=${{ secrets.SECRET_KEY }} -f Dockerfile.web -t ${{ secrets.DOCKER_USERNAME }}/daniel-todo-project:latest .
+          docker-compose -f docker-compose.yml build
+          docker-compose -f docker-compose.yml push
 
-      - name: Push Docker Image to Docker Hub
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/daniel-todo-project:latest
-
-  # Deploy job
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Ansible
+      - name: Run tests
         run: |
-          sudo apt update
-          sudo apt install -y ansible
-
-      - name: Create Inventory File
-        run: |
-          echo "[all]\ntodo_server ansible_host=${{ secrets.ANSIBLE_HOST }} ansible_user=${{ secrets.ANSIBLE_USER }} ansible_password=${{ secrets.ANSIBLE_PASSWORD }} ansible_become_password=${{ secrets.ANSIBLE_BECOME_PASSWORD }}" > hosts.ini
-
-      - name: Run Ansible Playbook
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "false"
-        run: |
-          ansible-playbook -i hosts.ini ansible/deploy.yml \
-            --extra-vars "docker_username=${{ secrets.DOCKER_USERNAME }} docker_password=${{ secrets.DOCKER_PASSWORD }}"
+          docker-compose -f docker-compose.yml up -d
+          docker-compose -f docker-compose.yml exec web python manage.py test
+          docker-compose -f docker-compose.yml down
