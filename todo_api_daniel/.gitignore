@@ -2,7 +2,7 @@
 .env
 .env.local
 .env.*.local
-hosts.ini
+# hosts.ini
 # Ignore IDE specific files
 .vscode/
 ../myenv
