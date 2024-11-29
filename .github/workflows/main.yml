@@ -148,4 +148,4 @@ jobs:
         run: |
           cd todo_api_daniel/ansible
           ansible-playbook -i hosts.ini deploy.yml
-```       --extra-vars "docker_username=${DOCKER_USERNAME} docker_password=${DOCKER_PASSWORD}"
+```       --extra-vars "docker_username=${{ secrets.DOCKER_USERNAME }} docker_password=${{ secrets.DOCKER_PASSWORD }}"
