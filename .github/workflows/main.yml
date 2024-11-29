@@ -32,9 +32,46 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-  test:
+  build:
     runs-on: ubuntu-latest
     needs: lint
+
+    services:
+      docker:
+        image: docker:19.03.12
+        options: --privileged
+        ports:
+          - 2375:2375
+        env:
+          DOCKER_TLS_CERTDIR: ""
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker images
+        run: |
+          docker-compose -f todo_api_daniel/docker-compose.yml build
+          docker-compose -f todo_api_daniel/docker-compose.yml push
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [lint, build]
 
     services:
       docker:
@@ -84,61 +121,20 @@ jobs:
           docker-compose -f todo_api_daniel/docker-compose.yml run --no-TTY web python manage.py test
           docker-compose -f todo_api_daniel/docker-compose.yml down
 
-  build:
+  deploy:
     runs-on: ubuntu-latest
     needs: test
 
-    services:
-      docker:
-        image: docker:19.03.12
-        options: --privileged
-        ports:
-          - 2375:2375
-        env:
-          DOCKER_TLS_CERTDIR: ""
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Install Docker Compose
+      - name: Install Ansible
         run: |
-          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-          docker-compose --version
+          sudo apt-get update
+          sudo apt-get install -y ansible
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Docker images
+      - name: Run Ansible Playbook
         run: |
-          docker-compose -f todo_api_daniel/docker-compose.yml build
-          docker-compose -f todo_api_daniel/docker-compose.yml push
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment: production
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Ansible
-        run: |
-          sudo apt update
-          sudo apt install -y ansible
-
-      - name: Deploy app with Ansible
-        run: |
-          ansible-playbook -i hosts.ini deploy.yml --extra-vars "ansible_password=${{ secrets.ANSIBLE_PASSWORD }} ansible_become_password=${{ secrets.ANSIBLE_BECOME_PASSWORD }}"
-
-      - name: Verify deployment
-        run: |
-          ssh -i ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY_FILE }} ${{ secrets.ANSIBLE_USER }}@${{ secrets.REMOTE_SERVER }} "docker-compose -f /home/${{ secrets.ANSIBLE_USER }}/daniel-todo-project/docker-compose.yml ps"
+          cd todo_api_daniel/ansible
+          ansible-playbook -i hosts.ini deploy.yml
