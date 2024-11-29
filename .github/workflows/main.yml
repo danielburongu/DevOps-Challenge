@@ -122,6 +122,29 @@ jobs:
           docker-compose -f todo_api_daniel/docker-compose.yml down
 
   deploy:
+  runs-on: ubuntu-latest
+  needs: test
+
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install Ansible and sshpass
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ansible sshpass
+
+    - name: Verify Ansible inventory and playbook
+      run: |
+        cd todo_api_daniel/ansible
+        ls -l hosts.ini  # List the files to ensure hosts.ini exists
+        cat hosts.ini     # Display the contents of hosts.ini to verify it's correct
+
+    - name: Run Ansible Playbook
+      run: |
+        cd todo_api_daniel/ansible
+        ansible-playbook -i hosts.ini deploy.yml
+
     runs-on: ubuntu-latest
     needs: test
 
