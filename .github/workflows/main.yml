@@ -143,6 +143,8 @@ jobs:
           cat todo_api_daniel/ansible/hosts.ini  # Display the contents of hosts.ini to verify it's correct
 
       - name: Run Ansible Playbook
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: False
         run: |
           cd todo_api_daniel/ansible
           ansible-playbook -i hosts.ini deploy.yml
